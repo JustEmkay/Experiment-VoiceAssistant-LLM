@@ -27,11 +27,14 @@ custome_theme = Theme(
 r = sr.Recognizer()
 r.energy_threshold = 300
 
-engine = pyttsx3.init() #object creation
+engine = pyttsx3.init(driverName= 'sapi5') #object creation
 rate = engine.getProperty("rate")
 engine.setProperty('rate',125)
 voices = engine.getProperty('voices')       #getting details of current voice
 engine.setProperty('voice', voices[1].id) 
+
+
+
 
 
 class ChatTree:
@@ -40,11 +43,7 @@ class ChatTree:
         
         self.root = Tree(Panel('[bold]CHATBOT'))
         
-        self.data = [
-            { 'assistant' : ['How can i help you??','27-11-2024, 10:25:01'] },
-            { 'user' : ["tell me today's date?",'27-11-2024, 10:25:01'] },
-            { 'assistant' : ["Today is Thursday.", '28-11-2024'] },
-        ]
+        self.data = []
     
     def add_user_prompt(self, prompt: str) -> None:
         userMsg = {'user': [prompt, datetime.now().strftime('%m/%d/%Y, %H:%M:%S')]}
@@ -57,13 +56,10 @@ class ChatTree:
     def add_error_response(self, errorMSg: str) -> None:
         errorMsg = {'error': [errorMSg, datetime.now().strftime('%m/%d/%Y, %H:%M:%S')]}
         self.data.append(errorMsg)
-        
-           
-    
-        
+            
     def build_tree(self):
         
-        root = Tree(Panel('[bold]CHATBOT'))
+        root = Tree(Panel(':talk: [bold]CHATBOT'))
         for chat in self.data[-6:]:
             for key, message in chat.items():
                 
@@ -77,22 +73,21 @@ class ChatTree:
                 branch = root.add(f"{color}{key}")
                 branch.add(
                     Panel(
-                        f"{message[0]}",
+                        f"{color}{message[0]}",
                         subtitle=f"{message[1]}",
-                        subtitle_align='right'
+                        subtitle_align='right',
+                        expand= True,
+                        safe_box= True
                         ))
                 
-                if key == 'assistant':
-                    branch.add(
-                        '[grey]Talk now'
-                    )
+            
         
-        root.add(Panel("[bold]END OF CHAT"))
+        root.add(Panel(":microphone: [bold]Say Something![/bold]"))
         
         return root
         
     
-
+    
 def main() -> None:
     
     console = Console()
@@ -100,22 +95,18 @@ def main() -> None:
 
 
 
-    # with sr.Microphone() as source:
-        # for i in track(range(5), description="Adjusting for ambient noise..."):
-        #     sleep(1)
-        # r.adjust_for_ambient_noise(source, duration=1)       
-        # Use Live to dynamically update the tree in real-time
+    with sr.Microphone() as source:
+        r.adjust_for_ambient_noise(source, duration=1)      
 
-    with Live(console=console, auto_refresh= True) as live:
-
+        # print(chat_tree.build_tree())
         
-        while True:
-            
-            with sr.Microphone() as source:
-                r.adjust_for_ambient_noise(source, duration=1)      
+        with Live(console=console, auto_refresh= True) as live:
+        
+            while True:
+                
                 chat_tree.add_assistant_response(response= 'How can i helo you?')
-                audio_text = r.listen(source, timeout=10, phrase_time_limit=10)
                 live.update(chat_tree.build_tree())
+                audio_text = r.listen(source, phrase_time_limit=60)
                 
                 try:
                     text = r.recognize_google(audio_text)
@@ -125,10 +116,8 @@ def main() -> None:
                         break
                     
                     chat_tree.add_user_prompt(prompt= text)
-                    engine.say(text)
                     live.update(chat_tree.build_tree())
-                    
-                    
+                    engine.say(text)
                     
                 except sr.RequestError as e:
                     # API was unreachable or unresponsive
@@ -143,10 +132,13 @@ def main() -> None:
                 except Exception as e:
                     chat_tree.add_error_response(errorMSg= f"Error: {str(e)}")
                     
-                engine.runAndWait()
-                engine.stop()
-        
-        
+                finally:
+                    engine.runAndWait()
+                    
+                
+        engine.stop()
+            
+            
 
 
 if __name__ == '__main__':

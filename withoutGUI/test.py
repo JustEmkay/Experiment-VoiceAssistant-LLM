@@ -1,87 +1,48 @@
-from rich.console import Console
-from rich.tree import Tree
-from rich.live import Live
-from time import sleep
-from rich.panel import Panel
-from rich import print
-from rich.theme import Theme
+import speech_recognition as sr
+import pyttsx3
+import time
+# Initialize recognizer class (for recognizing the speech)
+r = sr.Recognizer()
+r.energy_threshold = 300 # Optional: Adjust the energy threshold based on ambient noise levels
 
-from datetime import datetime
+engine = pyttsx3.init(driverName= 'sapi5') #object creation
+rate = engine.getProperty("rate")
+engine.setProperty('rate',125)
+voices = engine.getProperty('voices')       #getting details of current voice
+engine.setProperty('voice', voices[1].id)  #changing index, changes voices. o for male
 
-# rich ui theme setup
-custome_theme = Theme(
-    {
-        'info': 'bold cyan',
-        'warning': 'red',
-        'success': 'bold green'
-    }
-)
+# Reading Microphone as source
+with sr.Microphone() as source:
+    print("Adjusting for ambient noise... Please wait.")
+    r.adjust_for_ambient_noise(source, duration=1)
 
-
-class ChatTree:
+    while True:
     
-    def __init__(self) -> list:
-        self.data = [
-            { 'assistant' : ['How can i help you??','27-11-2024, 10:25:01'] },
-            { 'user' : ["tell me today's date?",'27-11-2024, 10:25:01'] },
-            { 'assistant' : ["Today is Thursday.", '28-11-2024'] },
-        ]
-    
-    def add_user_prompt(self, prompt: str) -> None:
-        dictry = {'user': [prompt, datetime.now().strftime('%m/%d/%Y, %H:%M:%S')]}
-        self.data.append(dictry)
-    
-    def add_assistant_response(self, response: str) -> None:
-        dictry = {'assistant': [response, datetime.now().strftime('%m/%d/%Y, %H:%M:%S')]}
-        self.data.append(dictry)
+        print("Talk now:")
         
-    def build_tree(self):
+        # Capture audio from the microphone
+        try:
+            audio_text = r.listen(source, phrase_time_limit=10)
+            print("Processing...")
+            text = r.recognize_google(audio_text)
+            print("Text: " + text)
+            if text == 'stop assist':
+                break
+            engine.say(text, str(rate))
+            
+            
+            
+        except sr.RequestError as e:
+            # API was unreachable or unresponsive
+            print(f"Could not request results from Google Speech Recognition service; {e}")
+        except sr.UnknownValueError:
+            # Speech was unintelligible
+            print("Google Speech Recognition could not understand the audio")
+        except Exception as e:
+            print(f"Error: {str(e)}")
         
-        root = Tree(Panel('[bold]CHATBOT'))
-        for chat in self.data[-6:]:
-            for key, message in chat.items():
-                
-                if key == 'assistant':
-                    color = "[bold red]"
-                elif key == 'user':
-                    color = "[bold green]"
-                elif key == 'error':
-                    color = '[bold grey0]'
-                                    
-                branch = root.add(f"{color}{key}")
-                branch.add(
-                    Panel(
-                        f"{message[0]}",
-                        subtitle=f"{message[1]}",
-                        subtitle_align='right'
-                        ))
-        
-        root.add(Panel("[bold]END OF CHAT"))
-        
-        return root
-        
-    
-
-def main() -> None:
-    
-    console = Console()
-    chat_tree = ChatTree()
-
-    # Use Live to dynamically update the tree in real-time
-    with Live(console=console, refresh_per_second=4) as live:
-        while True:
-            
-            chat_tree.add_user_prompt(prompt= 'thats cool')
-            
-            live.update(chat_tree.build_tree())
-            sleep(2)
-            
-            chat_tree.add_assistant_response(response= 'do you want to knwo any thing else')
-            
-            live.update(chat_tree.build_tree())
-            
-    
-
-
-if __name__ == '__main__':
-    main()
+        finally:
+            engine.runAndWait()    
+            # engine.say("Command confirmed. Stopping assistance.")
+    engine.stop()
+       
