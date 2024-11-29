@@ -1,5 +1,6 @@
 from ollamaModule import *
 from time import sleep
+from datetime import datetime
 
 from rich.console import Console
 from rich.tree import Tree
@@ -25,9 +26,57 @@ class llmOptions:
     def __init__(self) -> None:
         self.username : str = 'Manu'
         self.model_name : str = "llama3.2:1b " 
-        self.memory : list[dict[str,str]] = []
+        self.memory : list[dict[str,str]] = [
+            {
+                'assistant': ['How can help you?', '29/11/2024 09:53:19' ]
+            }
+        ]
         self.systemSettings : dict[str,str] = {}
         self.models : list = None
+        self.now : str  = datetime.now().strftime('%d/%m/%Y, %I:%M:%S')
+
+
+    def insert_response(self, response) -> None:
+        
+        self.memory.append({
+            'assistant': [response, self.now]
+        })
+
+    def insert_prompt(self, chat) -> None:
+        
+        self.memory.append({
+            'user': [chat, self.now]
+        })
+
+    def create_chatTree(self) -> None:
+        
+        root = Tree(Panel(f"Chatbot | model:[green]{self.model_name}"))
+        for chat in self.memory[-6:]:
+            for key, content in chat.items():
+                
+                if key == 'assistant':
+                    color = '[bold red]'
+                
+                elif key == 'user':
+                    color = '[bold green]'
+                    
+                branch = root.add(Panel(
+                        f"{color}{content[0]}",
+                        title=f"{color}{key}",
+                        title_align='left',
+                        subtitle=f"{content[1]}",
+                        subtitle_align='right',
+                        expand= True,
+                        safe_box= True,
+                        padding= 1
+                        ))
+                
+        return root
+
+    def get_response():
+        pass
+
+
 
 
     def New_llmSettings(self, console) -> None:
@@ -94,30 +143,22 @@ class llmOptions:
         self.New_llmSettings(console)
         
         if self.username and self.model_name:
-            console.clear()
-            modelnumber = Prompt.ask('chat',)
+            
+            while True:
+                console.clear()
+                print(self.create_chatTree())
+                print(Rule())
+                userChat : str = Prompt.ask("User")
+                if userChat == 'exit':
+                    break
+                self.insert_prompt(chat= userChat)
+                
+            
         
         
         
         
 
-
-    def insert_response(self, response) -> None:
-        
-        self.memory.append({
-            'role': 'assistant',
-            'content': response
-        })
-
-    def insert_prompt(self, response) -> None:
-        
-        self.memory.append({
-            'role': 'user',
-            'content': response
-        })
-
-    def get_response():
-        pass
 
 
     
