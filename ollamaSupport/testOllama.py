@@ -20,7 +20,6 @@ custome_theme = Theme(
     }
 )
 
-
 class llmOptions:
     
     def __init__(self) -> None:
@@ -35,7 +34,6 @@ class llmOptions:
         self.models : list = None
         self.now : str  = datetime.now().strftime('%d/%m/%Y, %I:%M:%S')
 
-
     def insert_response(self, response) -> None:
         
         self.memory.append({
@@ -49,8 +47,8 @@ class llmOptions:
         })
 
     def create_chatTree(self) -> None:
-        
-        root = Tree(Panel(f"Chatbot | model:[green]{self.model_name}"))
+        print(Rule())
+        root = Tree(Panel(f"[bold]Chatbot[/bold] | model:[green]{self.model_name}"))
         for chat in self.memory[-6:]:
             for key, content in chat.items():
                 
@@ -70,6 +68,7 @@ class llmOptions:
                         safe_box= True,
                         padding= 1
                         ))
+
                 
         return root
 
@@ -148,21 +147,17 @@ class llmOptions:
                 console.clear()
                 print(self.create_chatTree())
                 print(Rule())
-                userChat : str = Prompt.ask("User")
+                userChat : str = Prompt.ask(f"User [{self.username}]")
                 if userChat == 'exit':
                     break
-                self.insert_prompt(chat= userChat)
+                response= ollamaRequest(model_name= self.model_name,
+                              role= 'user',
+                              prompt= userChat)
                 
+                if response['status']:
+                    self.insert_prompt(chat= userChat)
+                    self.insert_response(response= response['response'])
             
-        
-        
-        
-        
-
-
-
-    
-
 
 def main() -> None:
     console = Console()
