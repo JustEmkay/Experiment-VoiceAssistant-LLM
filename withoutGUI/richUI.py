@@ -113,11 +113,15 @@ def main() -> None:
                     # print("Text: " + text)
                     if text == 'stop assist':
                         engine.say("Command confirmed. Stopping assistance.")
+                        engine.runAndWait()
+                        engine.stop()
                         break
                     
                     chat_tree.add_user_prompt(prompt= text)
                     live.update(chat_tree.build_tree())
                     engine.say(text)
+                    engine.runAndWait()
+                    engine.stop()
                     
                 except sr.RequestError as e:
                     # API was unreachable or unresponsive
@@ -132,11 +136,8 @@ def main() -> None:
                 except Exception as e:
                     chat_tree.add_error_response(errorMSg= f"Error: {str(e)}")
                     
-                finally:
-                    engine.runAndWait()
                     
                 
-        engine.stop()
             
             
 

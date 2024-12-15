@@ -1,48 +1,84 @@
-import speech_recognition as sr
-import pyttsx3
-import time
-# Initialize recognizer class (for recognizing the speech)
-r = sr.Recognizer()
-r.energy_threshold = 300 # Optional: Adjust the energy threshold based on ambient noise levels
+from rich.live import Live
+from rich.console import Console
+from rich.layout import Layout
+from rich.prompt import Prompt
+from rich.panel import Panel
+from rich.table import Table
+from rich.emoji import Emoji
 
-engine = pyttsx3.init(driverName= 'sapi5') #object creation
-rate = engine.getProperty("rate")
-engine.setProperty('rate',125)
-voices = engine.getProperty('voices')       #getting details of current voice
-engine.setProperty('voice', voices[1].id)  #changing index, changes voices. o for male
+from time import sleep
 
-# Reading Microphone as source
-with sr.Microphone() as source:
-    print("Adjusting for ambient noise... Please wait.")
-    r.adjust_for_ambient_noise(source, duration=1)
+todos = [
+    {'task':'go for a run', 'status': True},
+    {'task':'Run 5km min', 'status': True},
+    {'task':'Say i love you to juhi', 'status': False},
+    {'task':'go to store', 'status': False},
+    {'task':'kill bill', 'status': True},
+    ]
 
-    while True:
+def generateTable(heading: str, status: bool)-> Table:
     
-        print("Talk now:")
+    table = Table(title= heading)
+    
+    table.add_column(header= 'No.')
+    table.add_column(header= 'Task title')
+    table.add_column(header= 'Status')
+    
+    for idx, todo in enumerate(todos):
+        if todo['status'] == status:
+            table.add_row(str(idx), todo['task'], f"{ ':thumbsup:' if todo['status'] else ':thumbsdown:' }")
         
-        # Capture audio from the microphone
-        try:
-            audio_text = r.listen(source, phrase_time_limit=10)
-            print("Processing...")
-            text = r.recognize_google(audio_text)
-            print("Text: " + text)
-            if text == 'stop assist':
-                break
-            engine.say(text, str(rate))
-            
-            
-            
-        except sr.RequestError as e:
-            # API was unreachable or unresponsive
-            print(f"Could not request results from Google Speech Recognition service; {e}")
-        except sr.UnknownValueError:
-            # Speech was unintelligible
-            print("Google Speech Recognition could not understand the audio")
-        except Exception as e:
-            print(f"Error: {str(e)}")
+    return table
+    
+
+
+def createLayout()-> Layout:
+    
+    layout= Layout()
+    
+    layout.split(
+        Layout(name= 'header', size= 3),
+        Layout(name= 'body'),
+        Layout(name= 'footer', size= 3)
+    )
+    
+    layout['header'].update(Panel("Header"))
+    layout['footer'].update(Panel("Footer"))
+    
+    layout['body'].split_column(
+        Layout(name= 'todoList'),
+        Layout(name= 'create', size= 3)
+    )
+    
+    layout['todoList'].split_row(
+        Layout(name= 'Pending'),
+        Layout(name= 'Completed')
+    )
+    
+    layout['Pending'].update(generateTable(heading= 'Pending', status= False))
+    layout['Completed'].update(generateTable(heading= 'Completed', status= True))
+    
+    return layout
+
+
+
+def main():
+    
+    console= Console()
+    
+    layout = createLayout()
+    
+    # console.print(createLayout())
+    
+    with Live(createLayout(), auto_refresh= True) as live:
         
-        finally:
-            engine.runAndWait()    
-            # engine.say("Command confirmed. Stopping assistance.")
-    engine.stop()
-       
+        while True:
+            layout['create'].update(Panel( s = Prompt.ask("enter Index") ))
+            live.update(createLayout())
+            sleep(1)
+    
+    
+    
+    
+if __name__ == '__main__':
+    main()

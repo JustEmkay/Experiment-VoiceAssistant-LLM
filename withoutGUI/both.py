@@ -1,47 +1,89 @@
-import speech_recognition as sr
 import pyttsx3
-import time
-# Initialize recognizer class (for recognizing the speech)
-r = sr.Recognizer()
-r.energy_threshold = 300 # Optional: Adjust the energy threshold based on ambient noise levels
+import speech_recognition as sr
+from typing import Literal
 
 
-engine = pyttsx3.init() #object creation
-rate = engine.getProperty("rate")
-engine.setProperty('rate',125)
-voices = engine.getProperty('voices')       #getting details of current voice
-engine.setProperty('voice', voices[1].id)  #changing index, changes voices. o for male
 
-# Reading Microphone as source
-while True:
-    with sr.Microphone() as source:
-        print("Adjusting for ambient noise... Please wait.")
-        r.adjust_for_ambient_noise(source, duration=1)
+
+class Text2Speech:
+    
+    def __init__(swayam, voiceStyle: Literal[0,1] = 0):
+        swayam.engine= pyttsx3.init(driverName= 'sapi5')
         
-        print("Talk now:")
+        swayam.rate=  swayam.engine.getProperty("rate")
+        swayam.voices= swayam.engine.getProperty('voices')
+        swayam.volume = swayam.engine.getProperty('volume')
         
-        # Capture audio from the microphone
-        try:
-            audio_text = r.listen(source, timeout=5, phrase_time_limit=10)
-            print("Processing...")
-            text = r.recognize_google(audio_text)
-            print("Text: " + text)
-            if text == 'stop assist':
-                break
-            engine.say(text)
+        swayam.engine.setProperty('volume', swayam.volume-0)
+        swayam.engine.setProperty('rate',125)
+        swayam.engine.setProperty('voice', swayam.voices[voiceStyle].id)
+    
+        
+    
+    def say(swayam, text2Speack: str):
+
+        swayam.engine.say(text2Speack)
+        swayam.engine.runAndWait()
+        swayam.engine.stop()
+        
+
+class Voice2Text:
+    
+    def __init__(swayam):
+        
+        swayam.vt = sr.Recognizer()
+        swayam.vt.energy_threshold= 300
+        swayam.source= sr.Microphone()
+            
+        
+    def listen(swayam, duration: int= 1, timeout: int= 5, phrase_time_limit= 5) -> dict: 
+        
+        with swayam.source:
+            swayam.vt.adjust_for_ambient_noise(swayam.source, duration= duration)
+            print("Say something!")
+            audio_text= swayam.vt.listen(swayam.source,
+                                        timeout= timeout,
+                                        phrase_time_limit= phrase_time_limit)
+            
+            try:
+                print("Processing...")
+                text = swayam.vt.recognize_google(audio_text)
+                print("Text: " + text)
+                return {
+                    'status': True,
+                    'text': text
+                }
+                        
+            except sr.RequestError as e:
+                # API was unreachable or unresponsive
+                error= f"Could not request results from Google Speech Recognition service; {e}"
+                
+            except sr.UnknownValueError:
+                # Speech was unintelligible
+                error= "Google Speech Recognition could not understand the audio"
+            
+            except Exception as e:
+                error= f"Error: {str(e)}"
+                
+            return {
+                'status': False,
+                'text': error
+            }
             
             
             
-        except sr.RequestError as e:
-            # API was unreachable or unresponsive
-            print(f"Could not request results from Google Speech Recognition service; {e}")
-        except sr.UnknownValueError:
-            # Speech was unintelligible
-            print("Google Speech Recognition could not understand the audio")
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            
-        engine.runAndWait()
-        engine.say("Command confirmed. Stopping assistance.")
-        engine.stop()
-       
+def test()-> None:
+    
+    t2p = Text2Speech()
+    v2t = Voice2Text()
+    
+    hear= v2t.listen()
+    if hear['status']:
+        t2p.say(hear['text'])
+        
+    
+    
+    
+if __name__ == '__main__':
+    test()
+    
