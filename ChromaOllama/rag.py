@@ -3,7 +3,6 @@ import ollama
 import chromadb
 from chromadb.utils import embedding_functions
 
-from rich import print as pprint
 import uuid
 from time import sleep
 
@@ -11,16 +10,29 @@ import spacy
 from spacytextblob.spacytextblob import SpacyTextBlob
 
 
-
-# cc = chromadb.PersistentClient( path='test_collection' )
-
-# collection = cc.get_or_create_collection( name = 'test_collection' )
-
 # ChromaDB control
 class VectorDB:
+    """
+    Handles operations for a vector database using ChromaDB, including storing, 
+    querying, and checking for duplicate entries.
+
+    Attributes:
+        vd (PersistentClient): Persistent client for the ChromaDB database.
+        embedFunction (EmbeddingFunction): Function to embed texts for vector storage.
+        collection (Collection): The specific collection within the database being operated on.
+    """
+    
 
     def __init__( swayam, collection_name: str='test_collection' ):
         
+        """
+        Initializes the vector database and creates a collection.
+
+        Args:
+            collection_name (str): Name of the collection to be used or created in the database. 
+                                   Defaults to 'test_collection'.
+        """
+         
         swayam.vd= chromadb.PersistentClient(
             path= collection_name )
         
@@ -30,13 +42,23 @@ class VectorDB:
             name= collection_name )
     
     def isDuplicate(swayam, query: str, threshold: float= 0.1)-> bool:
-        
+        """
+        Checks if a given text is already stored in the database based on a similarity threshold.
+
+        Args:
+            query (str): The text to be checked for duplication.
+            threshold (float): The similarity threshold to consider two entries as duplicates. 
+                               Defaults to 0.1.
+
+        Returns:
+            bool: True if the query is a duplicate, False otherwise.
+        """
         result= swayam.collection.query(
             query_texts= [query],
             n_results= 1,
             include= ["distances", "documents"]
         )
-        pprint(result)
+
         if result:
             if  not result['distances'][0]:
                 return False
@@ -45,7 +67,17 @@ class VectorDB:
         return False
               
     def insertToDB(swayam, data: list[dict[str, str]] )-> str:
-        
+        """
+        Inserts a list of text entries into the database if they are not duplicates.
+
+        Args:
+            data (list[dict]): A list of dictionaries, where each dictionary contains:
+                               - 'id' (str): Unique identifier for the entry.
+                               - 'text' (str): The text content to be stored.
+
+        Returns:
+            str: Message indicating whether data was added or already exists.
+        """
         ids: list[int]= []
         texts: list[str]= []
             
@@ -58,7 +90,7 @@ class VectorDB:
             return 'Already in database.'
         
         embedded: list= swayam.embedFunction(texts)
-        pprint(embedded)
+
         
         try:
             swayam.collection.upsert(
@@ -72,7 +104,15 @@ class VectorDB:
             return f'Error: {e}'
         
     def search(swayam, query: str) -> str:
-        
+        """
+        Searches the database for the most relevant documents to the provided query.
+
+        Args:
+            query (str): The text query for which to search.
+
+        Returns:
+            str: The query results including matching documents and their distances.
+        """
         result= swayam.collection.query(
             query_texts= [query],
             n_results= 5
@@ -81,7 +121,12 @@ class VectorDB:
         return result
     
     def all(swayam) -> dict:
-        
+        """
+        Retrieves all documents from the current database collection.
+
+        Returns:
+            dict: A dictionary containing all documents in the collection.
+        """
         all_collections= swayam.collection.get()
         
         return all_collections
@@ -89,16 +134,34 @@ class VectorDB:
     
 # Communicattion betwee ollama models
 class OllamaLLM:
-    
+    """
+    Facilitates communication with Ollama language models for chat-based interactions.
+
+    Attributes:
+        model (str): The name of the Ollama model to use for communication.
+        role (str): The role for the interaction (e.g., 'user', 'assistant').
+    """
+
     def __init__(swayam,
                  model_name: str= None,
                  role = 'user'):
-        
+        """
+        Initializes the Ollama language model for interaction.
+
+        Args:
+            model_name (str): Name of the language model. Defaults to None.
+            role (str): Role of the model in the conversation. Defaults to 'user'.
+        """        
         swayam.model= model_name
         swayam.role= role
         
     def ollamaStatus(swayam) -> dict:
+        """
+        Checks the availability of the Ollama service and retrieves a list of available models.
 
+        Returns:
+            dict: Contains the status and available models, or an error message if unsuccessful.
+        """
         try:
             result = ollama.list()
             models = [r['model'] for r in result['models'] if r['model'] != 'moondream:latest']
@@ -114,16 +177,16 @@ class OllamaLLM:
             }
                   
     def ollamaRequest(swayam, user_query: str, prompt_template: str= None):
-        
-        # PROMPT_TEMPLATE = f"""
-        # Answer the question based only on the following :
-        # {swayam.similarMemory(query= user_query)}
-        # Answer the question based on the above context: {user_query}.
-        # Provide a detailed answer.
-        # Don’t justify your answers.
-        # Don’t give information not mentioned in the CONTEXT INFORMATION.
-        # Do not say "according to the context" or "mentioned in the context" or similar.
-        # """
+        """
+        Sends a query to the Ollama model and retrieves the response.
+
+        Args:
+            user_query (str): The user's input query.
+            prompt_template (str): A template to customize the system's response. Defaults to None.
+
+        Returns:
+            dict: Contains the status and response from the model, or an error message if unsuccessful.
+        """
         if not swayam.model:
             result= swayam.ollamaStatus()
             return result
@@ -157,9 +220,22 @@ class OllamaLLM:
         
 # retrievel augemented generation pipeline
 class RAG:
-    
+    """
+    Implements a Retrieval-Augmented Generation (RAG) pipeline, integrating VectorDB and OllamaLLM
+    for context-aware text generation.
+
+    Attributes:
+        llm (OllamaLLM): An instance of the OllamaLLM class for model interaction.
+        vectorDB (VectorDB): An instance of the VectorDB class for database interaction.
+        nlp (Language): A spaCy language model with sentiment analysis enabled.
+    """
     def __init__(swayam, model_name: str= None):
-        
+        """
+        Initializes the RAG pipeline with the specified language model.
+
+        Args:
+            model_name (str): Name of the language model. Defaults to None.
+        """        
         swayam.llm= OllamaLLM(model_name= model_name)
         swayam.vectorDB= VectorDB()
         
@@ -167,7 +243,16 @@ class RAG:
         swayam.nlp.add_pipe('spacytextblob')
         
     def retrieve(swayam, user_query) -> list:
-        
+        """
+        Retrieves relevant documents from the database based on the user's query.
+
+        Args:
+            user_query (str): The input query for retrieval.
+
+        Returns:
+            list: A list of relevant documents retrieved from the database.
+        """
+    
         vdb_response= swayam.vectorDB.search(query= user_query)
         
         indexList: list[int]= []
@@ -183,7 +268,15 @@ class RAG:
         # if distance >= 1 remove
       
     def sentiment_analysis(swayam, text) -> dict:
-       
+        """
+        Performs sentiment analysis and entity extraction on a given text.
+
+        Args:
+            text (str): The text to analyze.
+
+        Returns:
+            dict: Contains sentiment, subjectivity, and named entities extracted from the text.
+        """
         doc = swayam.nlp(text)
         
         polarity: float= doc._.blob.polarity          # sentiment
@@ -202,7 +295,15 @@ class RAG:
         }
         
     def augment(swayam, user_query: str) -> dict:
-        
+        """
+        Retrieves and augments relevant documents with sentiment analysis.
+
+        Args:
+            user_query (str): The input query for retrieval.
+
+        Returns:
+            dict: Augmented data including sentiment and entity information.
+        """
         retrieved: list= swayam.retrieve(user_query= user_query)
         
         augemented: list[dict]= [ swayam.sentiment_analysis(_) for _ in retrieved ]
@@ -210,10 +311,17 @@ class RAG:
         return augemented
         
     def generate(swayam, user_query: str):
-        
+        """
+        Combines retrieved data with language model responses for context-aware generation.
+
+        Args:
+            user_query (str): The user's input query.
+
+        Returns:
+            dict: The response generated by the language model based on retrieved data.
+        """
         augmented_data: list[dict]= swayam.augment(user_query= user_query)
         
-        pprint(augmented_data)
     
         formatted_context = "\n".join([
         f"- Sentence: {data['text']}, Sentiment: {data['Sentiment']}, Subjectivity: {data['subjectivity']}, Entities: {data['entities']}"
@@ -238,8 +346,8 @@ class RAG:
     
 # rag = RAG(model_name= 'llama3.2:1b')
 # pprint(rag.generate("Can you tell me Manu's place?"))
-vdb= VectorDB()
-pprint(vdb.all())
+# # vdb= VectorDB()
+# pprint(vdb.all())
 
 # vdb.insertToDB([{'id':str(uuid.uuid4()), 'text': 'manu is a sadistic person'}])
 # vdb.insertToDB([{'id':str(uuid.uuid4()), 'text':"i'am Manu's girlfriend"}])
