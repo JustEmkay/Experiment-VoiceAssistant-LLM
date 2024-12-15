@@ -4,5 +4,22 @@
 
 </div>
 
-# Simple Voice assistant using Python Packages + Ollama 
+# Voice Assistant using Ollama(RAG) [ Experiment ]
 ---
+
+## Literally trying to build a voice assistant using local LLM from ollama and Python Packages.
+
+:warning: Not recommended to clone repos until I add Requirements.txt :warning:
+
+### Aim: 
+#### This is project is me trying to ***Learn***:
+*   **Retrieval Augmented Generation** aka **RAG** (Pipline)
+*   [**ChromaDB**](https://www.trychroma.com/): (vector database)
+*   **Natural Language Processing** aka **NLP**
+*   **Prompt Engineering**
+*   Edge version local **Large Language Model** aka **LLM** (ollama)
+
+### Features working on:
+*   Voice to Text.
+*   Text to Speech.
+*   Memory.
