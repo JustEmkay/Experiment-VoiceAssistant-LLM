@@ -23,3 +23,15 @@
 *   Voice to Text.
 *   Text to Speech.
 *   Memory.
+
+## File Structure
+
+```
+project/
+├── basicChatBot           # Basic Chatbot - predefined response
+├── RAGmodule              # RAG (Retrieval-Augmented Generation) module
+├── ollamaSupport          # Simple ollama module and test ollama 
+├── T2SnS2T                # Text2Speech nad Speech2Text
+├── withoutGUI             # Try T2S and S2T [run richUI.py]
+└── README.md              # Documentation for the project.
+```
