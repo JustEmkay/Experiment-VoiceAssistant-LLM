@@ -16,19 +16,18 @@ from spacytextblob.spacytextblob import SpacyTextBlob
 
 # collection = cc.get_or_create_collection( name = 'test_collection' )
 
-
+# ChromaDB control
 class VectorDB:
 
-    def __init__( swayam ):
+    def __init__( swayam, collection_name: str='test_collection' ):
         
         swayam.vd= chromadb.PersistentClient(
-            path= 'test_collection' )
+            path= collection_name )
         
         swayam.embedFunction= embedding_functions.DefaultEmbeddingFunction()
         
         swayam.collection= swayam.vd.get_or_create_collection(
-            name= 'test_collection' )
-    
+            name= collection_name )
     
     def isDuplicate(swayam, query: str, threshold: float= 0.1)-> bool:
         
@@ -81,7 +80,14 @@ class VectorDB:
         
         return result
     
+    def all(swayam) -> dict:
+        
+        all_collections= swayam.collection.get()
+        
+        return all_collections
     
+    
+# Communicattion betwee ollama models
 class OllamaLLM:
     
     def __init__(swayam,
@@ -106,8 +112,7 @@ class OllamaLLM:
                 'status' : False,
                 'msg' : f"Error : {e}",
             }
-            
-        
+                  
     def ollamaRequest(swayam, user_query: str, prompt_template: str= None):
         
         # PROMPT_TEMPLATE = f"""
@@ -149,8 +154,8 @@ class OllamaLLM:
                 'msg': e
             }
         
-    
-
+        
+# retrievel augemented generation pipeline
 class RAG:
     
     def __init__(swayam, model_name: str= None):
@@ -176,8 +181,7 @@ class RAG:
         
         return documents
         # if distance >= 1 remove
-    
-    
+      
     def sentiment_analysis(swayam, text) -> dict:
        
         doc = swayam.nlp(text)
@@ -232,9 +236,10 @@ class RAG:
         return response
     
     
-rag = RAG(model_name= 'llama3.2:1b')
-pprint(rag.generate("Can you tell me Manu's place?"))
-# vdb= VectorDB()
+# rag = RAG(model_name= 'llama3.2:1b')
+# pprint(rag.generate("Can you tell me Manu's place?"))
+vdb= VectorDB()
+pprint(vdb.all())
 
 # vdb.insertToDB([{'id':str(uuid.uuid4()), 'text': 'manu is a sadistic person'}])
 # vdb.insertToDB([{'id':str(uuid.uuid4()), 'text':"i'am Manu's girlfriend"}])
