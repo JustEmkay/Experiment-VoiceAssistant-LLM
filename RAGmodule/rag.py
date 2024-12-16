@@ -9,6 +9,7 @@ from time import sleep
 import spacy
 from spacytextblob.spacytextblob import SpacyTextBlob
 
+from rich import print as pprint
 
 # ChromaDB control
 class VectorDB:
@@ -229,7 +230,8 @@ class RAG:
         vectorDB (VectorDB): An instance of the VectorDB class for database interaction.
         nlp (Language): A spaCy language model with sentiment analysis enabled.
     """
-    def __init__(swayam, model_name: str= None):
+    def __init__(swayam, model_name: str= None,
+                 collection_name: str= 'test_collection'):
         """
         Initializes the RAG pipeline with the specified language model.
 
@@ -237,8 +239,8 @@ class RAG:
             model_name (str): Name of the language model. Defaults to None.
         """        
         swayam.llm= OllamaLLM(model_name= model_name)
-        swayam.vectorDB= VectorDB()
-        
+        swayam.vectorDB= VectorDB(collection_name= collection_name)
+        swayam.vectorDB
         swayam.nlp= spacy.load("en_core_web_sm")
         swayam.nlp.add_pipe('spacytextblob')
         
@@ -330,9 +332,9 @@ class RAG:
     
         PROMPT_TEMPLATE = f"""
         You are a Helpful AI assistant.
-        Use Piece of context given inside Triple backtick to answer the user:
+        Use Piece of context given to answer the user:
         
-        ```{formatted_context}```
+        {formatted_context}
         
         Keep the answers concise.
     
@@ -346,7 +348,7 @@ class RAG:
     
 # rag = RAG(model_name= 'llama3.2:1b')
 # pprint(rag.generate("Can you tell me Manu's place?"))
-# # vdb= VectorDB()
+# vdb= VectorDB()
 # pprint(vdb.all())
 
 # vdb.insertToDB([{'id':str(uuid.uuid4()), 'text': 'manu is a sadistic person'}])
